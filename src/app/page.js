@@ -20,6 +20,47 @@ function saveHistory(list) {
   } catch {}
 }
 
+function linesToArr(text) {
+  return text.split("\n").map((s) => s.trim()).filter(Boolean);
+}
+
+function outlineToText(outline) {
+  return (outline || [])
+    .map((s) => {
+      const subs = (s.h3 || []).map((h) => `  - ${h}`).join("\n");
+      return subs ? `${s.h2}\n${subs}` : s.h2;
+    })
+    .join("\n");
+}
+
+function textToOutline(text) {
+  const out = [];
+  text.split("\n").forEach((raw) => {
+    if (!raw.trim()) return;
+    const isSub = /^\s/.test(raw) || /^-/.test(raw.trim());
+    const clean = raw.replace(/^\s*-?\s*/, "").trim();
+    if (isSub && out.length) {
+      out[out.length - 1].h3.push(clean);
+    } else {
+      out.push({ h2: clean, h3: [] });
+    }
+  });
+  return out;
+}
+
+function makeDraft(b) {
+  return {
+    recommendedTitle: b.recommendedTitle || "",
+    metaDescription: b.metaDescription || "",
+    targetWordCount: String(b.targetWordCount ?? ""),
+    outlineText: outlineToText(b.outline),
+    subtopicsText: (b.subtopicsToCover || []).join("\n"),
+    lsiText: (b.lsiKeywords || []).join("\n"),
+    contentGapsText: (b.contentGaps || []).join("\n"),
+    faqText: (b.faq || []).join("\n"),
+  };
+}
+
 const REGIONS = [
   { label: "United States (English)", value: "us|en" },
   { label: "United Kingdom (English)", value: "gb|en" },
@@ -179,7 +220,7 @@ export default function Home() {
           <p className="font-semibold text-[#1a1a1a]">How to use</p>
           <p>1. Pick Single or Bulk, choose the target country/language, then enter your keyword(s).</p>
           <p>2. Hit Generate — each keyword reads the live Google top 10 and analyzes competitors (~30s).</p>
-          <p>3. Review each brief, then Copy / Word / PDF to hand it to a writer.</p>
+          <p>3. Edit if needed, then Copy / Word / PDF to hand it to a writer.</p>
         </div>
 
         {history.length > 0 && (
@@ -225,7 +266,32 @@ export default function Home() {
 
 function BriefView({ item }) {
   const [copied, setCopied] = useState(false);
-  const b = item.brief;
+  const [brief, setBrief] = useState(item.brief);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(null);
+  const b = brief;
+  const upd = (k, v) => setDraft((d) => ({ ...d, [k]: v }));
+  const inputCls = "w-full border border-[#e2e4eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4169e1]";
+
+  function startEdit() {
+    setDraft(makeDraft(brief));
+    setEditing(true);
+  }
+
+  function saveEdit() {
+    setBrief({
+      ...brief,
+      recommendedTitle: draft.recommendedTitle.trim(),
+      metaDescription: draft.metaDescription.trim(),
+      targetWordCount: parseInt(draft.targetWordCount, 10) || brief.targetWordCount,
+      outline: textToOutline(draft.outlineText),
+      subtopicsToCover: linesToArr(draft.subtopicsText),
+      lsiKeywords: linesToArr(draft.lsiText),
+      contentGaps: linesToArr(draft.contentGapsText),
+      faq: linesToArr(draft.faqText),
+    });
+    setEditing(false);
+  }
 
   function briefToHtml() {
     const h3html = (arr) =>
@@ -307,55 +373,100 @@ function BriefView({ item }) {
       </summary>
       <div className="px-5 pb-5 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={copyBrief} className="border border-[#e2e4eb] rounded-lg px-3 py-1 text-sm hover:bg-[#f9f9f9]">
-            {copied ? "Copied!" : "Copy"}
-          </button>
-          <button onClick={downloadWord} className="border border-[#e2e4eb] rounded-lg px-3 py-1 text-sm hover:bg-[#f9f9f9]">
-            Word
-          </button>
-          <button onClick={downloadPdf} className="border border-[#e2e4eb] rounded-lg px-3 py-1 text-sm hover:bg-[#f9f9f9]">
-            PDF
-          </button>
+          {editing ? (
+            <>
+              <button onClick={saveEdit} className="bg-[#4169e1] hover:bg-[#3457c4] text-white rounded-lg px-3 py-1 text-sm transition-colors">Save</button>
+              <button onClick={() => setEditing(false)} className="border border-[#e2e4eb] rounded-lg px-3 py-1 text-sm hover:bg-[#f9f9f9]">Cancel</button>
+            </>
+          ) : (
+            <>
+              <button onClick={startEdit} className="border border-[#e2e4eb] rounded-lg px-3 py-1 text-sm hover:bg-[#f9f9f9]">Edit</button>
+              <button onClick={copyBrief} className="border border-[#e2e4eb] rounded-lg px-3 py-1 text-sm hover:bg-[#f9f9f9]">{copied ? "Copied!" : "Copy"}</button>
+              <button onClick={downloadWord} className="border border-[#e2e4eb] rounded-lg px-3 py-1 text-sm hover:bg-[#f9f9f9]">Word</button>
+              <button onClick={downloadPdf} className="border border-[#e2e4eb] rounded-lg px-3 py-1 text-sm hover:bg-[#f9f9f9]">PDF</button>
+            </>
+          )}
         </div>
-        <Section n="01" title="Title">{b.recommendedTitle}</Section>
-        <Section n="02" title="Meta description">{b.metaDescription}</Section>
-        <Section n="03" title="Outline">
-          <ol className="list-decimal ml-5 space-y-1">
-            {b.outline.map((s, i) => (
-              <li key={i}>
-                <b>{s.h2}</b>
-                {s.h3?.length > 0 && (
-                  <ul className="list-disc ml-5 text-[#6b7280]">
-                    {s.h3.map((h, j) => <li key={j}>{h}</li>)}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ol>
-        </Section>
-        <Section n="04" title="Subtopics to cover">{b.subtopicsToCover.join(", ")}</Section>
-        <Section n="05" title="LSI keywords">{b.lsiKeywords.join(", ")}</Section>
-        <Section n="06" title="Content gaps — opportunities to win">
-          <ul className="list-disc ml-5">{(b.contentGaps || []).map((g, i) => <li key={i}>{g}</li>)}</ul>
-        </Section>
-        <Section n="07" title="FAQ">
-          <ul className="list-disc ml-5">{b.faq.map((q, i) => <li key={i}>{q}</li>)}</ul>
-        </Section>
-        <Section n="08" title="Sources analyzed (top 10)">
-          <ol className="list-decimal ml-5 space-y-1">
-            {item.serp.organic.map((r, i) => {
-              const page = item.pages?.find((p) => p.url === r.link);
-              return (
-                <li key={i}>
-                  <a href={r.link} target="_blank" rel="noopener noreferrer" className="text-[#4169e1] underline">{r.title}</a>
-                  {page && <span className="text-[#6b7280]"> — {page.wordCount} words</span>}
-                </li>
-              );
-            })}
-          </ol>
-        </Section>
+
+        {editing ? (
+          <div className="space-y-3">
+            <Field label="Title">
+              <input className={inputCls} value={draft.recommendedTitle} onChange={(e) => upd("recommendedTitle", e.target.value)} />
+            </Field>
+            <Field label="Meta description">
+              <textarea className={`${inputCls} h-16`} value={draft.metaDescription} onChange={(e) => upd("metaDescription", e.target.value)} />
+            </Field>
+            <Field label="Target word count">
+              <input type="number" className={inputCls} value={draft.targetWordCount} onChange={(e) => upd("targetWordCount", e.target.value)} />
+            </Field>
+            <Field label="Outline — one H2 per line; indent or start a line with '- ' for an H3">
+              <textarea className={`${inputCls} h-48 font-mono`} value={draft.outlineText} onChange={(e) => upd("outlineText", e.target.value)} />
+            </Field>
+            <Field label="Subtopics to cover — one per line">
+              <textarea className={`${inputCls} h-24`} value={draft.subtopicsText} onChange={(e) => upd("subtopicsText", e.target.value)} />
+            </Field>
+            <Field label="LSI keywords — one per line">
+              <textarea className={`${inputCls} h-24`} value={draft.lsiText} onChange={(e) => upd("lsiText", e.target.value)} />
+            </Field>
+            <Field label="Content gaps — one per line">
+              <textarea className={`${inputCls} h-24`} value={draft.contentGapsText} onChange={(e) => upd("contentGapsText", e.target.value)} />
+            </Field>
+            <Field label="FAQ — one per line">
+              <textarea className={`${inputCls} h-24`} value={draft.faqText} onChange={(e) => upd("faqText", e.target.value)} />
+            </Field>
+          </div>
+        ) : (
+          <>
+            <Section n="01" title="Title">{b.recommendedTitle}</Section>
+            <Section n="02" title="Meta description">{b.metaDescription}</Section>
+            <Section n="03" title="Outline">
+              <ol className="list-decimal ml-5 space-y-1">
+                {b.outline.map((s, i) => (
+                  <li key={i}>
+                    <b>{s.h2}</b>
+                    {s.h3?.length > 0 && (
+                      <ul className="list-disc ml-5 text-[#6b7280]">
+                        {s.h3.map((h, j) => <li key={j}>{h}</li>)}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </Section>
+            <Section n="04" title="Subtopics to cover">{b.subtopicsToCover.join(", ")}</Section>
+            <Section n="05" title="LSI keywords">{b.lsiKeywords.join(", ")}</Section>
+            <Section n="06" title="Content gaps — opportunities to win">
+              <ul className="list-disc ml-5">{(b.contentGaps || []).map((g, i) => <li key={i}>{g}</li>)}</ul>
+            </Section>
+            <Section n="07" title="FAQ">
+              <ul className="list-disc ml-5">{b.faq.map((q, i) => <li key={i}>{q}</li>)}</ul>
+            </Section>
+            <Section n="08" title="Sources analyzed (top 10)">
+              <ol className="list-decimal ml-5 space-y-1">
+                {item.serp.organic.map((r, i) => {
+                  const page = item.pages?.find((p) => p.url === r.link);
+                  return (
+                    <li key={i}>
+                      <a href={r.link} target="_blank" rel="noopener noreferrer" className="text-[#4169e1] underline">{r.title}</a>
+                      {page && <span className="text-[#6b7280]"> — {page.wordCount} words</span>}
+                    </li>
+                  );
+                })}
+              </ol>
+            </Section>
+          </>
+        )}
       </div>
     </details>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <label className="block">
+      <span className="block text-sm font-medium text-[#373737] mb-1">{label}</span>
+      {children}
+    </label>
   );
 }
 
