@@ -61,16 +61,24 @@ export default function Home() {
   }
 
   return (
-    <div className={`${inter.className} min-h-screen bg-[#f9f9f9] text-[#1a1a1a]`}>
-      <main className="max-w-3xl mx-auto px-4 py-10 space-y-6">
-        <header className="space-y-2">
-          <div className="flex items-center gap-2 text-xs font-semibold tracking-widest text-[#4169e1] uppercase">
-            <span className="h-2 w-2 rounded-full bg-[#4169e1]"></span>
-            Plus8Soft
+    <div className={`${inter.className} min-h-screen flex flex-col bg-[#f9f9f9] text-[#1a1a1a]`}>
+      <header className="border-b border-[#e2e4eb] bg-white">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <img src="/logo.jpg" alt="Plus8Soft" className="h-8 w-8 rounded-md" />
+            <span className="font-bold tracking-widest text-sm">PLUS8SOFT</span>
           </div>
+          <a href="https://plus8soft.com" target="_blank" rel="noopener noreferrer" className="text-sm text-[#4169e1] font-medium hover:underline">
+            plus8soft.com
+          </a>
+        </div>
+      </header>
+
+      <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-10 space-y-6">
+        <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">SEO Content Brief Generator</h1>
           <p className="text-[#6b7280]">Turn any keyword into a ready-to-write content brief in seconds.</p>
-        </header>
+        </div>
 
         <div className="bg-white border border-[#e2e4eb] rounded-xl shadow-sm p-5 space-y-3">
           <div className="flex items-center gap-2">
@@ -116,7 +124,7 @@ export default function Home() {
           <button
             onClick={generate}
             disabled={running || !hasInput}
-            className="w-full sm:w-auto bg-[#4169e1] hover:bg-[#3457c4] text-white font-medium rounded-lg px-5 py-2 disabled:opacity-50 transition-colors"
+            className="w-full sm:w-auto bg-[#4169e1] hover:bg-[#3457c4] text-white font-medium rounded-full px-6 py-2 disabled:opacity-50 transition-colors"
           >
             {running ? "Analyzing…" : "Generate"}
           </button>
@@ -145,6 +153,13 @@ export default function Home() {
           )
         )}
       </main>
+
+      <footer className="bg-[#1a1a1a] text-[#c9c9c9]">
+        <div className="max-w-5xl mx-auto px-4 py-6 flex items-center justify-between text-sm">
+          <span>© 2026 Plus8Soft</span>
+          <a href="https://plus8soft.com" target="_blank" rel="noopener noreferrer" className="hover:text-white">plus8soft.com</a>
+        </div>
+      </footer>
     </div>
   );
 }
@@ -243,9 +258,9 @@ function BriefView({ item }) {
             PDF
           </button>
         </div>
-        <Section title="Title">{b.recommendedTitle}</Section>
-        <Section title="Meta description">{b.metaDescription}</Section>
-        <Section title="Outline">
+        <Section n="01" title="Title">{b.recommendedTitle}</Section>
+        <Section n="02" title="Meta description">{b.metaDescription}</Section>
+        <Section n="03" title="Outline">
           <ol className="list-decimal ml-5 space-y-1">
             {b.outline.map((s, i) => (
               <li key={i}>
@@ -259,15 +274,15 @@ function BriefView({ item }) {
             ))}
           </ol>
         </Section>
-        <Section title="Subtopics to cover">{b.subtopicsToCover.join(", ")}</Section>
-        <Section title="LSI keywords">{b.lsiKeywords.join(", ")}</Section>
-        <Section title="Content gaps — opportunities to win">
+        <Section n="04" title="Subtopics to cover">{b.subtopicsToCover.join(", ")}</Section>
+        <Section n="05" title="LSI keywords">{b.lsiKeywords.join(", ")}</Section>
+        <Section n="06" title="Content gaps — opportunities to win">
           <ul className="list-disc ml-5">{(b.contentGaps || []).map((g, i) => <li key={i}>{g}</li>)}</ul>
         </Section>
-        <Section title="FAQ">
+        <Section n="07" title="FAQ">
           <ul className="list-disc ml-5">{b.faq.map((q, i) => <li key={i}>{q}</li>)}</ul>
         </Section>
-        <Section title="Sources analyzed (top 10)">
+        <Section n="08" title="Sources analyzed (top 10)">
           <ol className="list-decimal ml-5 space-y-1">
             {item.serp.organic.map((r, i) => {
               const page = item.pages?.find((p) => p.url === r.link);
@@ -285,10 +300,13 @@ function BriefView({ item }) {
   );
 }
 
-function Section({ title, children }) {
+function Section({ n, title, children }) {
   return (
     <div className="border-t border-[#eef0f4] pt-3">
-      <h2 className="font-semibold mb-1 text-[#4169e1]">{title}</h2>
+      <div className="flex items-baseline gap-2 mb-1">
+        {n && <span className="text-sm font-semibold text-[#4169e1]">{n}</span>}
+        <h2 className="font-semibold text-[#1a1a1a]">{title}</h2>
+      </div>
       <div>{children}</div>
     </div>
   );
