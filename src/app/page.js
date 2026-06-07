@@ -1,8 +1,24 @@
 "use client";
 import { useState } from "react";
+import { Inter } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin"] });
+
+const REGIONS = [
+  { label: "United States (English)", value: "us|en" },
+  { label: "United Kingdom (English)", value: "gb|en" },
+  { label: "Germany (German)", value: "de|de" },
+  { label: "France (French)", value: "fr|fr" },
+  { label: "Spain (Spanish)", value: "es|es" },
+  { label: "Italy (Italian)", value: "it|it" },
+  { label: "Brazil (Portuguese)", value: "br|pt" },
+  { label: "India (English)", value: "in|en" },
+  { label: "Russia (Russian)", value: "ru|ru" },
+];
 
 export default function Home() {
   const [keyword, setKeyword] = useState("");
+  const [region, setRegion] = useState("us|en");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [data, setData] = useState(null);
@@ -15,11 +31,12 @@ export default function Home() {
     setStatus(steps[0]);
     const t1 = setTimeout(() => setStatus(steps[1]), 3000);
     const t2 = setTimeout(() => setStatus(steps[2]), 15000);
+    const [gl, hl] = region.split("|");
     try {
       const res = await fetch("/api/brief", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword, crawl: true }),
+        body: JSON.stringify({ keyword, crawl: true, gl, hl }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -90,87 +107,114 @@ export default function Home() {
   }
 
   return (
-    <main className="max-w-3xl mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold">SEO Content Brief Generator</h1>
-      <div className="flex gap-2">
-        <input
-          className="border rounded px-3 py-2 flex-1"
-          placeholder="Enter a keyword…"
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && generate()}
-        />
-        <button
-          onClick={generate}
-          disabled={loading || !keyword}
-          className="bg-black text-white rounded px-4 py-2 disabled:opacity-50"
-        >
-          {loading ? "Analyzing…" : "Generate"}
-        </button>
-      </div>
+    <div className={`${inter.className} min-h-screen bg-[#f9f9f9] text-[#1a1a1a]`}>
+      <main className="max-w-3xl mx-auto px-4 py-10 space-y-6">
+        <header className="space-y-2">
+          <div className="flex items-center gap-2 text-xs font-semibold tracking-widest text-[#4169e1] uppercase">
+            <span className="h-2 w-2 rounded-full bg-[#4169e1]"></span>
+            Plus8Soft
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight">SEO Content Brief Generator</h1>
+          <p className="text-[#6b7280]">Turn any keyword into a ready-to-write content brief in seconds.</p>
+        </header>
 
-      {loading && status && (
-        <p className="text-sm text-gray-500 animate-pulse">{status}</p>
-      )}
-      {error && <p className="text-red-600">{error}</p>}
-
-      {b && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-gray-500 flex-1">
-              Pages analyzed: {data.analyzedPages} · target length ~{b.targetWordCount} words
-            </p>
-            <button onClick={copyBrief} className="border rounded px-3 py-1 text-sm">
-              {copied ? "Copied!" : "Copy"}
-            </button>
-            <button onClick={downloadWord} className="border rounded px-3 py-1 text-sm">
-              Download Word
+        <div className="bg-white border border-[#e2e4eb] rounded-xl shadow-sm p-5 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <select
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              className="border border-[#e2e4eb] rounded-lg px-3 py-2 bg-white text-sm sm:w-56"
+            >
+              {REGIONS.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+            <input
+              className="border border-[#e2e4eb] rounded-lg px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-[#4169e1]"
+              placeholder="Enter a keyword…"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && generate()}
+            />
+            <button
+              onClick={generate}
+              disabled={loading || !keyword}
+              className="bg-[#4169e1] hover:bg-[#3457c4] text-white font-medium rounded-lg px-5 py-2 disabled:opacity-50 transition-colors"
+            >
+              {loading ? "Analyzing…" : "Generate"}
             </button>
           </div>
-          <Section title="Title">{b.recommendedTitle}</Section>
-          <Section title="Meta description">{b.metaDescription}</Section>
-          <Section title="Outline">
-            <ol className="list-decimal ml-5 space-y-1">
-              {b.outline.map((s, i) => (
-                <li key={i}>
-                  <b>{s.h2}</b>
-                  {s.h3?.length > 0 && (
-                    <ul className="list-disc ml-5 text-gray-600">
-                      {s.h3.map((h, j) => <li key={j}>{h}</li>)}
-                    </ul>
-                  )}
-                </li>
-              ))}
-            </ol>
-          </Section>
-          <Section title="Subtopics to cover">{b.subtopicsToCover.join(", ")}</Section>
-          <Section title="LSI keywords">{b.lsiKeywords.join(", ")}</Section>
-          <Section title="FAQ">
-            <ul className="list-disc ml-5">{b.faq.map((q, i) => <li key={i}>{q}</li>)}</ul>
-          </Section>
-          <Section title="Sources analyzed (top 10)">
-            <ol className="list-decimal ml-5 space-y-1">
-              {data.serp.organic.map((r, i) => {
-                const page = data.pages?.find((p) => p.url === r.link);
-                return (
-                  <li key={i}>
-                    <a href={r.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">{r.title}</a>
-                    {page && <span className="text-gray-500"> — {page.wordCount} words</span>}
-                  </li>
-                );
-              })}
-            </ol>
-          </Section>
+          {loading && status && (
+            <p className="text-sm text-[#4169e1] animate-pulse">{status}</p>
+          )}
+          {error && <p className="text-sm text-[#c53939]">{error}</p>}
         </div>
-      )}
-    </main>
+
+        <div className="bg-[#eef2fd] border border-[#d6dde5] rounded-xl p-4 text-sm text-[#373737] space-y-1">
+          <p className="font-semibold text-[#1a1a1a]">How to use</p>
+          <p>1. Pick the target country/language, then enter your focus keyword.</p>
+          <p>2. Hit Generate — it reads the live Google top 10 and analyzes competitors (~30s).</p>
+          <p>3. Review the brief, then Copy it or Download as Word to hand to a writer.</p>
+        </div>
+
+        {b && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-[#6b7280] flex-1">
+                Pages analyzed: {data.analyzedPages} · target length ~{b.targetWordCount} words
+              </p>
+              <button onClick={copyBrief} className="border border-[#e2e4eb] rounded-lg px-3 py-1 text-sm hover:bg-[#f9f9f9]">
+                {copied ? "Copied!" : "Copy"}
+              </button>
+              <button onClick={downloadWord} className="bg-[#4169e1] hover:bg-[#3457c4] text-white rounded-lg px-3 py-1 text-sm transition-colors">
+                Download Word
+              </button>
+            </div>
+            <Section title="Title">{b.recommendedTitle}</Section>
+            <Section title="Meta description">{b.metaDescription}</Section>
+            <Section title="Outline">
+              <ol className="list-decimal ml-5 space-y-1">
+                {b.outline.map((s, i) => (
+                  <li key={i}>
+                    <b>{s.h2}</b>
+                    {s.h3?.length > 0 && (
+                      <ul className="list-disc ml-5 text-[#6b7280]">
+                        {s.h3.map((h, j) => <li key={j}>{h}</li>)}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </Section>
+            <Section title="Subtopics to cover">{b.subtopicsToCover.join(", ")}</Section>
+            <Section title="LSI keywords">{b.lsiKeywords.join(", ")}</Section>
+            <Section title="FAQ">
+              <ul className="list-disc ml-5">{b.faq.map((q, i) => <li key={i}>{q}</li>)}</ul>
+            </Section>
+            <Section title="Sources analyzed (top 10)">
+              <ol className="list-decimal ml-5 space-y-1">
+                {data.serp.organic.map((r, i) => {
+                  const page = data.pages?.find((p) => p.url === r.link);
+                  return (
+                    <li key={i}>
+                      <a href={r.link} target="_blank" rel="noopener noreferrer" className="text-[#4169e1] underline">{r.title}</a>
+                      {page && <span className="text-[#6b7280]"> — {page.wordCount} words</span>}
+                    </li>
+                  );
+                })}
+              </ol>
+            </Section>
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
 
 function Section({ title, children }) {
   return (
-    <div className="border rounded p-4">
-      <h2 className="font-semibold mb-1">{title}</h2>
+    <div className="bg-white border border-[#e2e4eb] rounded-xl shadow-sm p-5">
+      <h2 className="font-semibold mb-2 text-[#4169e1]">{title}</h2>
       <div>{children}</div>
     </div>
   );

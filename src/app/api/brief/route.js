@@ -7,11 +7,11 @@ export const maxDuration = 60;
 
 export async function POST(req) {
   try {
-    const { keyword, crawl = true } = await req.json();
+    const { keyword, crawl = true, gl, hl } = await req.json();
     if (!keyword?.trim())
       return NextResponse.json({ error: "keyword required" }, { status: 400 });
 
-    const serp = await getSerp(keyword);
+    const serp = await getSerp(keyword, { gl, hl });
     const pages = crawl
       ? await crawlPages(serp.organic.slice(0, 6).map((r) => r.link))
       : [];
