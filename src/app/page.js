@@ -4,12 +4,17 @@ import { useState } from "react";
 export default function Home() {
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState("");
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
 
   async function generate() {
     setLoading(true); setError(""); setData(null);
+    const steps = ["Searching Google…", "Reading competitor pages…", "Writing the brief…"];
+    setStatus(steps[0]);
+    const t1 = setTimeout(() => setStatus(steps[1]), 3000);
+    const t2 = setTimeout(() => setStatus(steps[2]), 15000);
     try {
       const res = await fetch("/api/brief", {
         method: "POST",
@@ -20,7 +25,11 @@ export default function Home() {
       if (!res.ok) throw new Error(json.error);
       setData(json);
     } catch (e) { setError(e.message); }
-    finally { setLoading(false); }
+    finally {
+      clearTimeout(t1); clearTimeout(t2);
+      setStatus("");
+      setLoading(false);
+    }
   }
 
   const b = data?.brief;
@@ -100,6 +109,9 @@ export default function Home() {
         </button>
       </div>
 
+      {loading && status && (
+        <p className="text-sm text-gray-500 animate-pulse">{status}</p>
+      )}
       {error && <p className="text-red-600">{error}</p>}
 
       {b && (
@@ -135,6 +147,19 @@ export default function Home() {
           <Section title="LSI keywords">{b.lsiKeywords.join(", ")}</Section>
           <Section title="FAQ">
             <ul className="list-disc ml-5">{b.faq.map((q, i) => <li key={i}>{q}</li>)}</ul>
+          </Section>
+          <Section title="Sources analyzed (top 10)">
+            <ol className="list-decimal ml-5 space-y-1">
+              {data.serp.organic.map((r, i) => {
+                const page = data.pages?.find((p) => p.url === r.link);
+                return (
+                  <li key={i}>
+                    <a href={r.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">{r.title}</a>
+                    {page && <span className="text-gray-500"> — {page.wordCount} words</span>}
+                  </li>
+                );
+              })}
+            </ol>
           </Section>
         </div>
       )}

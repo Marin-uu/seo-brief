@@ -17,7 +17,7 @@ export async function POST(req) {
       : [];
     const brief = await generateBrief({ keyword, serp, pages });
 
-    return NextResponse.json({ keyword, brief, serp, analyzedPages: pages.length });
+    return NextResponse.json({ keyword, brief, serp, pages, analyzedPages: pages.length });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
