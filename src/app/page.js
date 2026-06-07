@@ -51,6 +51,26 @@ export default function Home() {
 
   const b = data?.brief;
 
+  function briefToHtml() {
+    const h3html = (arr) =>
+      arr?.length ? `<ul>${arr.map((h) => `<li>${h}</li>`).join("")}</ul>` : "";
+    return `<html><head><meta charset="utf-8"><title>SEO Content Brief: ${data.keyword}</title></head><body style="font-family: Arial, sans-serif; max-width: 720px; margin: 0 auto; padding: 24px; color: #1a1a1a;">
+<h1>SEO Content Brief: ${data.keyword}</h1>
+<p><b>Target length:</b> ~${b.targetWordCount} words</p>
+<h2>Title</h2><p>${b.recommendedTitle}</p>
+<h2>Meta description</h2><p>${b.metaDescription}</p>
+<h2>Outline</h2>
+<ol>${b.outline.map((s) => `<li><b>${s.h2}</b>${h3html(s.h3)}</li>`).join("")}</ol>
+<h2>Subtopics to cover</h2>
+<ul>${b.subtopicsToCover.map((x) => `<li>${x}</li>`).join("")}</ul>
+<h2>LSI keywords</h2><p>${b.lsiKeywords.join(", ")}</p>
+<h2>Content gaps (opportunities)</h2>
+<ul>${(b.contentGaps || []).map((x) => `<li>${x}</li>`).join("")}</ul>
+<h2>FAQ</h2>
+<ul>${b.faq.map((q) => `<li>${q}</li>`).join("")}</ul>
+</body></html>`;
+  }
+
   function briefToText() {
     const lines = [];
     lines.push(`SEO Content Brief: ${data.keyword}`);
@@ -70,6 +90,9 @@ export default function Home() {
     lines.push("");
     lines.push(`LSI KEYWORDS: ${b.lsiKeywords.join(", ")}`);
     lines.push("");
+    lines.push("CONTENT GAPS (OPPORTUNITIES):");
+    (b.contentGaps || []).forEach((x) => lines.push(`- ${x}`));
+    lines.push("");
     lines.push("FAQ:");
     b.faq.forEach((q) => lines.push(`- ${q}`));
     return lines.join("\n");
@@ -82,28 +105,22 @@ export default function Home() {
   }
 
   function downloadWord() {
-    const h3html = (arr) =>
-      arr?.length ? `<ul>${arr.map((h) => `<li>${h}</li>`).join("")}</ul>` : "";
-    const html = `<html><head><meta charset="utf-8"></head><body>
-<h1>SEO Content Brief: ${data.keyword}</h1>
-<p><b>Target length:</b> ~${b.targetWordCount} words</p>
-<h2>Title</h2><p>${b.recommendedTitle}</p>
-<h2>Meta description</h2><p>${b.metaDescription}</p>
-<h2>Outline</h2>
-<ol>${b.outline.map((s) => `<li><b>${s.h2}</b>${h3html(s.h3)}</li>`).join("")}</ol>
-<h2>Subtopics to cover</h2>
-<ul>${b.subtopicsToCover.map((x) => `<li>${x}</li>`).join("")}</ul>
-<h2>LSI keywords</h2><p>${b.lsiKeywords.join(", ")}</p>
-<h2>FAQ</h2>
-<ul>${b.faq.map((q) => `<li>${q}</li>`).join("")}</ul>
-</body></html>`;
-    const blob = new Blob(["\ufeff", html], { type: "application/msword" });
+    const blob = new Blob(["\ufeff", briefToHtml()], { type: "application/msword" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = `seo-brief-${data.keyword}.doc`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function downloadPdf() {
+    const w = window.open("", "_blank");
+    if (!w) return;
+    w.document.write(briefToHtml());
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 300);
   }
 
   return (
@@ -154,20 +171,23 @@ export default function Home() {
           <p className="font-semibold text-[#1a1a1a]">How to use</p>
           <p>1. Pick the target country/language, then enter your focus keyword.</p>
           <p>2. Hit Generate — it reads the live Google top 10 and analyzes competitors (~30s).</p>
-          <p>3. Review the brief, then Copy it or Download as Word to hand to a writer.</p>
+          <p>3. Review the brief, then Copy / Word / PDF to hand it to a writer.</p>
         </div>
 
         {b && (
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <p className="text-sm text-[#6b7280] flex-1">
                 Pages analyzed: {data.analyzedPages} · target length ~{b.targetWordCount} words
               </p>
               <button onClick={copyBrief} className="border border-[#e2e4eb] rounded-lg px-3 py-1 text-sm hover:bg-[#f9f9f9]">
                 {copied ? "Copied!" : "Copy"}
               </button>
-              <button onClick={downloadWord} className="bg-[#4169e1] hover:bg-[#3457c4] text-white rounded-lg px-3 py-1 text-sm transition-colors">
-                Download Word
+              <button onClick={downloadWord} className="border border-[#e2e4eb] rounded-lg px-3 py-1 text-sm hover:bg-[#f9f9f9]">
+                Word
+              </button>
+              <button onClick={downloadPdf} className="border border-[#e2e4eb] rounded-lg px-3 py-1 text-sm hover:bg-[#f9f9f9]">
+                PDF
               </button>
             </div>
             <Section title="Title">{b.recommendedTitle}</Section>
@@ -188,6 +208,9 @@ export default function Home() {
             </Section>
             <Section title="Subtopics to cover">{b.subtopicsToCover.join(", ")}</Section>
             <Section title="LSI keywords">{b.lsiKeywords.join(", ")}</Section>
+            <Section title="Content gaps — opportunities to win">
+              <ul className="list-disc ml-5">{(b.contentGaps || []).map((g, i) => <li key={i}>{g}</li>)}</ul>
+            </Section>
             <Section title="FAQ">
               <ul className="list-disc ml-5">{b.faq.map((q, i) => <li key={i}>{q}</li>)}</ul>
             </Section>

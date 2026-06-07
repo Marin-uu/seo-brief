@@ -37,8 +37,11 @@ Write the entire brief in English. Return strictly JSON with no markdown wrapper
   "outline": [{ "h2": "string", "h3": ["string"] }],
   "subtopicsToCover": ["string"],
   "lsiKeywords": ["string"],
-  "faq": ["string"]
-}`;
+  "faq": ["string"],
+  "contentGaps": ["string"]
+}
+
+For "contentGaps": list 3-6 subtopics or angles that matter for this query but that few of the top-ranking pages cover well — concrete content opportunities to outrank competitors.`;
 
   const msg = await client.messages.create({
     model: "claude-sonnet-4-6",
