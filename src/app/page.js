@@ -6,6 +6,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
 
   async function generate() {
     setLoading(true); setError(""); setData(null);
@@ -23,6 +24,61 @@ export default function Home() {
   }
 
   const b = data?.brief;
+
+  function briefToText() {
+    const lines = [];
+    lines.push(`SEO Content Brief: ${data.keyword}`);
+    lines.push(`Target length: ~${b.targetWordCount} words`);
+    lines.push("");
+    lines.push(`TITLE: ${b.recommendedTitle}`);
+    lines.push(`META DESCRIPTION: ${b.metaDescription}`);
+    lines.push("");
+    lines.push("OUTLINE:");
+    b.outline.forEach((s, i) => {
+      lines.push(`${i + 1}. ${s.h2}`);
+      (s.h3 || []).forEach((h) => lines.push(`   - ${h}`));
+    });
+    lines.push("");
+    lines.push("SUBTOPICS TO COVER:");
+    b.subtopicsToCover.forEach((x) => lines.push(`- ${x}`));
+    lines.push("");
+    lines.push(`LSI KEYWORDS: ${b.lsiKeywords.join(", ")}`);
+    lines.push("");
+    lines.push("FAQ:");
+    b.faq.forEach((q) => lines.push(`- ${q}`));
+    return lines.join("\n");
+  }
+
+  async function copyBrief() {
+    await navigator.clipboard.writeText(briefToText());
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  function downloadWord() {
+    const h3html = (arr) =>
+      arr?.length ? `<ul>${arr.map((h) => `<li>${h}</li>`).join("")}</ul>` : "";
+    const html = `<html><head><meta charset="utf-8"></head><body>
+<h1>SEO Content Brief: ${data.keyword}</h1>
+<p><b>Target length:</b> ~${b.targetWordCount} words</p>
+<h2>Title</h2><p>${b.recommendedTitle}</p>
+<h2>Meta description</h2><p>${b.metaDescription}</p>
+<h2>Outline</h2>
+<ol>${b.outline.map((s) => `<li><b>${s.h2}</b>${h3html(s.h3)}</li>`).join("")}</ol>
+<h2>Subtopics to cover</h2>
+<ul>${b.subtopicsToCover.map((x) => `<li>${x}</li>`).join("")}</ul>
+<h2>LSI keywords</h2><p>${b.lsiKeywords.join(", ")}</p>
+<h2>FAQ</h2>
+<ul>${b.faq.map((q) => `<li>${q}</li>`).join("")}</ul>
+</body></html>`;
+    const blob = new Blob(["\ufeff", html], { type: "application/msword" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `seo-brief-${data.keyword}.doc`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <main className="max-w-3xl mx-auto p-6 space-y-6">
@@ -48,9 +104,17 @@ export default function Home() {
 
       {b && (
         <div className="space-y-4">
-          <p className="text-sm text-gray-500">
-            Pages analyzed: {data.analyzedPages} · target length ~{b.targetWordCount} words
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-gray-500 flex-1">
+              Pages analyzed: {data.analyzedPages} · target length ~{b.targetWordCount} words
+            </p>
+            <button onClick={copyBrief} className="border rounded px-3 py-1 text-sm">
+              {copied ? "Copied!" : "Copy"}
+            </button>
+            <button onClick={downloadWord} className="border rounded px-3 py-1 text-sm">
+              Download Word
+            </button>
+          </div>
           <Section title="Title">{b.recommendedTitle}</Section>
           <Section title="Meta description">{b.metaDescription}</Section>
           <Section title="Outline">
