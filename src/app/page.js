@@ -1,8 +1,24 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Inter } from "next/font/google";
 
 const inter = Inter({ subsets: ["latin"] });
+
+const HISTORY_KEY = "seo-brief-history";
+
+function loadHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(list) {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+  } catch {}
+}
 
 const REGIONS = [
   { label: "United States (English)", value: "us|en" },
@@ -25,6 +41,11 @@ export default function Home() {
   const [status, setStatus] = useState("");
   const [results, setResults] = useState([]);
   const [error, setError] = useState("");
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    setHistory(loadHistory());
+  }, []);
 
   const hasInput = mode === "bulk" ? keywordsText.trim() : keyword.trim();
 
@@ -57,7 +78,26 @@ export default function Home() {
       setResults([...collected]);
     }
 
+    const successes = collected
+      .filter((c) => !c.error)
+      .map((c) => ({ ...c, savedAt: Date.now() }));
+    if (successes.length) {
+      const merged = [...successes, ...loadHistory()].slice(0, 50);
+      saveHistory(merged);
+      setHistory(merged);
+    }
+
     setStatus(""); setRunning(false);
+  }
+
+  function openFromHistory(entry) {
+    setError("");
+    setResults([entry]);
+  }
+
+  function clearHistory() {
+    saveHistory([]);
+    setHistory([]);
   }
 
   return (
@@ -141,6 +181,25 @@ export default function Home() {
           <p>2. Hit Generate — each keyword reads the live Google top 10 and analyzes competitors (~30s).</p>
           <p>3. Review each brief, then Copy / Word / PDF to hand it to a writer.</p>
         </div>
+
+        {history.length > 0 && (
+          <details className="bg-white border border-[#e2e4eb] rounded-xl shadow-sm">
+            <summary className="cursor-pointer select-none px-5 py-3 font-semibold text-[#1a1a1a]">
+              History <span className="font-normal text-[#6b7280] text-sm">· {history.length} saved on this device</span>
+            </summary>
+            <div className="px-5 pb-4 space-y-1">
+              {history.map((h, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm py-0.5">
+                  <button onClick={() => openFromHistory(h)} className="text-[#4169e1] hover:underline flex-1 text-left truncate">
+                    {h.keyword}
+                  </button>
+                  <span className="text-[#6b7280] text-xs whitespace-nowrap">{new Date(h.savedAt).toLocaleDateString()}</span>
+                </div>
+              ))}
+              <button onClick={clearHistory} className="text-xs text-[#c53939] hover:underline mt-2">Clear history</button>
+            </div>
+          </details>
+        )}
 
         {results.map((item, i) =>
           item.error ? (
